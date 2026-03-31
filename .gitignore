@@ -1,0 +1,9 @@
+# Ignore everything by default
+*
+
+# Keep git config files
+!.gitignore
+
+# Track scripts directory and its contents
+!/scripts/
+!/scripts/**
