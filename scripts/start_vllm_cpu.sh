@@ -7,6 +7,11 @@ MODEL_NAME="${MODEL_NAME:-Qwen/Qwen3-1.7B}"
 SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-qwen3-1.7b-cpu}"
 CONTAINER_NAME="${CONTAINER_NAME:-vllm-cpu-qwen}"
 HOST_PORT="${HOST_PORT:-8001}"
+THREADS="${THREADS:-4}"
+MAX_NUM_SEQS="${MAX_NUM_SEQS:-4}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-4096}"
+VLLM_CPU_KVCACHE_SPACE="${VLLM_CPU_KVCACHE_SPACE:-1}"
+DTYPE="${DTYPE:-bfloat16}"
 HF_CACHE_DIR="${HF_CACHE_DIR:-$PWD/hf-cache}"
 IMAGE="${IMAGE:-vllm/vllm-openai-cpu:latest-x86_64}"
 MODEL_LOCAL_DIR="${MODEL_LOCAL_DIR:-}"
@@ -31,14 +36,22 @@ echo "Starting vLLM on CPU, port ${HOST_PORT}"
 
 docker run -d \
   --name "${CONTAINER_NAME}" \
+  --cpus "4" \
+  --memory "8g" \
   --ipc=host \
+  -e "OMP_NUM_THREADS=${THREADS}" \
+  -e "MKL_NUM_THREADS=${THREADS}" \
+  -e "VLLM_CPU_KVCACHE_SPACE=${VLLM_CPU_KVCACHE_SPACE}" \
   -e "HF_ENDPOINT=${HF_ENDPOINT}" \
   -p "${HOST_PORT}:8000" \
   -v "${HF_CACHE_DIR}:/root/.cache/huggingface" \
   "${MODEL_MOUNT_ARGS[@]}" \
   "${IMAGE}" \
   "${MODEL_ARG}" \
-  --served-model-name "${SERVED_MODEL_NAME}"
+  --served-model-name "${SERVED_MODEL_NAME}" \
+  --dtype "${DTYPE}" \
+  --max-num-seqs "${MAX_NUM_SEQS}" \
+  --max-model-len "${MAX_MODEL_LEN}"
 
 echo "Done."
 echo "Logs: docker logs -f ${CONTAINER_NAME}"

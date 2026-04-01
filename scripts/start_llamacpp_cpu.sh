@@ -43,11 +43,16 @@ docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 echo "Starting llama.cpp (CPU), port ${HOST_PORT} -> ${CONTAINER_PORT}"
 docker run -d \
   --name "${CONTAINER_NAME}" \
+  --cpus "4" \
+  --memory "4g" \
   -p "${HOST_PORT}:${CONTAINER_PORT}" \
   -e "HF_ENDPOINT=${HF_ENDPOINT}" \
   "${MOUNT_ARGS[@]}" \
   "${IMAGE}" \
   "${MODEL_ARGS[@]}" \
+  --threads 4 \
+  --parallel 4 \
+  --ctx-size 4096 \
   --host 0.0.0.0 \
   --port "${CONTAINER_PORT}"
 
