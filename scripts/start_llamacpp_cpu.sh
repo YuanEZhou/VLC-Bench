@@ -11,11 +11,16 @@ CONTAINER_PORT="${CONTAINER_PORT:-8080}"
 MODEL_GGUF="${MODEL_GGUF:-$PWD/Qwen/Qwen3-1.7B-GGUF/Qwen3-1.7B-Q8_0.gguf}"
 MODELS_DIR="${MODELS_DIR:-}"
 HF_CACHE_DIR="${HF_CACHE_DIR:-$PWD/hf-cache}"
+ENABLE_TOOL_CALLING="${ENABLE_TOOL_CALLING:-1}"
+CHAT_TEMPLATE="${CHAT_TEMPLATE:-}"
+CHAT_TEMPLATE_FILE="${CHAT_TEMPLATE_FILE:-}"
+BUILTIN_TOOLS="${BUILTIN_TOOLS:-}"
 
 mkdir -p "${HF_CACHE_DIR}"
 
 MODEL_ARGS=()
 MOUNT_ARGS=( -v "${HF_CACHE_DIR}:/root/.cache/huggingface" )
+TOOL_ARGS=()
 
 if [[ ! -f "${MODEL_GGUF}" ]]; then
   echo "ERROR: MODEL_GGUF does not exist: ${MODEL_GGUF}" >&2
@@ -37,6 +42,21 @@ MODEL_GGUF_BASE="$(basename "${MODEL_GGUF_ABS}")"
 MOUNT_ARGS+=( -v "${MODELS_DIR_ABS}:/models:ro" )
 MODEL_ARGS=( -m "/models/${MODEL_GGUF_BASE}" )
 
+if [[ "${ENABLE_TOOL_CALLING}" == "1" ]]; then
+  # Force jinja template parsing so tool calls can be emitted as structured fields.
+  TOOL_ARGS+=( --jinja --no-skip-chat-parsing )
+  if [[ -n "${CHAT_TEMPLATE}" ]]; then
+    TOOL_ARGS+=( --chat-template "${CHAT_TEMPLATE}" )
+  fi
+  if [[ -n "${CHAT_TEMPLATE_FILE}" ]]; then
+    TOOL_ARGS+=( --chat-template-file "${CHAT_TEMPLATE_FILE}" )
+  fi
+fi
+
+if [[ -n "${BUILTIN_TOOLS}" ]]; then
+  TOOL_ARGS+=( --tools "${BUILTIN_TOOLS}" )
+fi
+
 echo "Removing old container: ${CONTAINER_NAME}"
 docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 
@@ -54,7 +74,8 @@ docker run -d \
   --parallel 4 \
   --ctx-size 4096 \
   --host 0.0.0.0 \
-  --port "${CONTAINER_PORT}"
+  --port "${CONTAINER_PORT}" \
+  "${TOOL_ARGS[@]}"
 
 echo "Done."
 echo "Logs: docker logs -f ${CONTAINER_NAME}"

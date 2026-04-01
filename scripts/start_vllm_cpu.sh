@@ -15,11 +15,19 @@ DTYPE="${DTYPE:-bfloat16}"
 HF_CACHE_DIR="${HF_CACHE_DIR:-$PWD/hf-cache}"
 IMAGE="${IMAGE:-vllm/vllm-openai-cpu:latest-x86_64}"
 MODEL_LOCAL_DIR="${MODEL_LOCAL_DIR:-}"
+ENABLE_AUTO_TOOL_CHOICE="${ENABLE_AUTO_TOOL_CHOICE:-1}"
+TOOL_CALL_PARSER="${TOOL_CALL_PARSER:-hermes}"
 
 mkdir -p "${HF_CACHE_DIR}"
 
 MODEL_ARG="${MODEL_NAME}"
 MODEL_MOUNT_ARGS=()
+TOOL_ARGS=()
+
+if [[ "${ENABLE_AUTO_TOOL_CHOICE}" == "1" ]]; then
+  TOOL_ARGS+=( --enable-auto-tool-choice --tool-call-parser "${TOOL_CALL_PARSER}" )
+fi
+
 if [[ -n "${MODEL_LOCAL_DIR}" ]]; then
   if [[ ! -d "${MODEL_LOCAL_DIR}" ]]; then
     echo "ERROR: MODEL_LOCAL_DIR does not exist: ${MODEL_LOCAL_DIR}" >&2
@@ -51,7 +59,8 @@ docker run -d \
   --served-model-name "${SERVED_MODEL_NAME}" \
   --dtype "${DTYPE}" \
   --max-num-seqs "${MAX_NUM_SEQS}" \
-  --max-model-len "${MAX_MODEL_LEN}"
+  --max-model-len "${MAX_MODEL_LEN}" \
+  "${TOOL_ARGS[@]}"
 
 echo "Done."
 echo "Logs: docker logs -f ${CONTAINER_NAME}"
